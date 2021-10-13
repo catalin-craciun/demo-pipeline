@@ -1,3 +1,54 @@
+
+Parameters:
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: VpcId of your existing Virtual Private Cloud (VPC)
+    ConstraintDescription: must be the VPC Id of an existing Virtual Private Cloud.
+  Subnets:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Description: The list of SubnetIds in your Virtual Private Cloud (VPC)
+    ConstraintDescription: >-
+      must be a list of at least two existing subnets associated with at least
+      two different availability zones. They should be residing in the selected
+      Virtual Private Cloud.
+  DBClass:
+    Description: Database instance class
+    Type: String
+    Default: db.t2.small
+    ConstraintDescription: must select a valid database instance type.
+  DBName:
+    Default: wordpressdb
+    Description: The WordPress database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBUser:
+    NoEcho: 'true'
+    Description: The WordPress database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: The WordPress database admin account password
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+  MultiAZDatabase:
+    Default: 'false'
+    Description: Create a Multi-AZ MySQL Amazon RDS database instance
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    ConstraintDescription: must be either true or false.
+
 Resources:
 
 #Create EC2 instance1
@@ -23,8 +74,7 @@ Resources:
       Scheme: internal
       Type: application
       Subnets:
-        - Fn::GetAtt: [ Ec2Instance1,SubnetId ]
-        - Fn::GetAtt: [ Ec2Instance2,SubnetId ]
+        Ref: Subnets
 
 #Create a Listener on port 80
   ALBListener:
@@ -53,4 +103,37 @@ Resources:
       Targets:
       - Id: !GetAtt [ Ec2Instance2, InstanceId1 ]
       - Id: !GetAtt [ Ec2Instance2, InstanceId2 ]
-      
+
+#Create DB Security Group
+  DBEC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Open database for access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+      VpcId:
+        Ref: VpcId 
+
+#Create a Database
+  DBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBName:
+        Ref: DBName
+      Engine: MySQL
+      MultiAZ:
+        Ref: MultiAZDatabase
+      MasterUsername:
+        Ref: DBUser
+      MasterUserPassword:
+        Ref: DBPassword
+      DBInstanceClass:
+        Ref: DBClass
+      AllocatedStorage:
+        Ref: DBAllocatedStorage
+      VPCSecurityGroups:
+        - 'Fn::GetAtt':
+            - DBEC2SecurityGroup
+            - GroupId
