@@ -71,7 +71,3 @@ Resources:
         Ref: DBClass
       AllocatedStorage:
         Ref: DBAllocatedStorage
-      VPCSecurityGroups:
-        - 'Fn::GetAtt':
-            - DBEC2SecurityGroup
-            - GroupId
