@@ -1,0 +1,77 @@
+Resources:
+
+#Create EC2 instance1
+  Ec2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-02e136e904f3da870
+
+#Create EC2 instance1
+  Ec2Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-02e136e904f3da870
+
+#Create an Application LoadBalancer
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      IpAddressType: ipv4
+      Name: MyAppLoadBalancer
+      Scheme: internal
+      Type: application
+      Subnets:
+        - Fn::GetAtt: [ Ec2Instance1,SubnetId ]
+        - Fn::GetAtt: [ Ec2Instance2,SubnetId ]
+
+#Create a Listener on port 80
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn:
+            Ref: ALBTargetGroup
+      LoadBalancerArn:
+        Ref: ApplicationLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+
+#Create a Target Group:
+  ALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Name: MyTargetGroup
+      TargetType: instance
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Ref: VpcId
+      Targets:
+      - Id: !GetAtt [ Ec2Instance2, InstanceId1 ]
+      - Id: !GetAtt [ Ec2Instance2, InstanceId2 ]
+      
+#Create a Database
+  DBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBName:
+        Ref: DBName
+      Engine: MySQL
+      MultiAZ:
+        Ref: MultiAZDatabase
+      MasterUsername:
+        Ref: DBUser
+      MasterUserPassword:
+        Ref: DBPassword
+      DBInstanceClass:
+        Ref: DBClass
+      AllocatedStorage:
+        Ref: DBAllocatedStorage
+      VPCSecurityGroups:
+        - 'Fn::GetAtt':
+            - DBEC2SecurityGroup
+            - GroupId
