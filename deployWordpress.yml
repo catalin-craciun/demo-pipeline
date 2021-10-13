@@ -1,4 +1,4 @@
-
+AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   VpcId:
     Type: 'AWS::EC2::VPC::Id'
@@ -11,7 +11,7 @@ Parameters:
       must be a list of at least two existing subnets associated with at least
       two different availability zones. They should be residing in the selected
       Virtual Private Cloud.
-  DBClass:
+  DBInstanceClass:
     Description: Database instance class
     Type: String
     Default: db.t2.small
@@ -40,14 +40,6 @@ Parameters:
     MaxLength: '41'
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
-  MultiAZDatabase:
-    Default: 'false'
-    Description: Create a Multi-AZ MySQL Amazon RDS database instance
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    ConstraintDescription: must be either true or false.
 
 Resources:
 
@@ -104,36 +96,20 @@ Resources:
       - Id: !GetAtt [ Ec2Instance2, InstanceId1 ]
       - Id: !GetAtt [ Ec2Instance2, InstanceId2 ]
 
-#Create DB Security Group
-  DBEC2SecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Open database for access
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '3306'
-          ToPort: '3306'
-      VpcId:
-        Ref: VpcId 
-
 #Create a Database
   DBInstance:
     Type: 'AWS::RDS::DBInstance'
     Properties:
+      DBInstanceIdentifier: 
+        Ref: DBInstanceID
       DBName:
         Ref: DBName
       Engine: MySQL
-      MultiAZ:
-        Ref: MultiAZDatabase
       MasterUsername:
         Ref: DBUser
       MasterUserPassword:
         Ref: DBPassword
       DBInstanceClass:
-        Ref: DBClass
+        Ref: DBInstanceClass
       AllocatedStorage:
         Ref: DBAllocatedStorage
-      VPCSecurityGroups:
-        - 'Fn::GetAtt':
-            - DBEC2SecurityGroup
-            - GroupId
